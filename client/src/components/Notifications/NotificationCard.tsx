@@ -19,7 +19,7 @@ const NotificationCard: React.FC = () => {
   }, [notifications, removeNotification]);
 
   return (
-    <div className="space-y-2 w-screen max-w-2xl fixed right-5 bottom-4 h-screen pointer-events-none z-10 flex flex-col items-end justify-end">
+    <div className="space-y-2 w-screen max-w-2xl fixed right-5 bottom-4 h-screen pointer-events-none z-[100] flex flex-col items-end justify-end">
       {notifications.map((notification) => (
         <div
           key={notification.id}

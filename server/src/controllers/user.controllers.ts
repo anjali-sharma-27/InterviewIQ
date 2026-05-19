@@ -3,7 +3,8 @@ import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { UserModel } from "../models/user.model";
 import { validationResult } from "express-validator";
-import admin from "../firebase/firebase";
+import admin, { isFirebaseAdminConfigured } from "../firebase/firebase";
+import { authCookieOptions } from "../utils/cookies";
 
 export const getUser = async (req: Request, res: Response) => {
   try {
@@ -38,31 +39,27 @@ export const registerUser = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    // Hash the password
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10);
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const hashedPassword = password
+      ? await bcrypt.hash(password, saltRounds)
+      : undefined;
 
-    // Create a new user
     user = new UserModel({
       name,
       email,
-      password: hashedPassword,
+      ...(hashedPassword ? { password: hashedPassword } : {}),
       firebaseUID: firebaseUID || null,
     });
 
     await user.save();
 
-    // Generate a JWT token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET as string, {
-      expiresIn: "1h",
-    });
+    const token = jwt.sign(
+      { user: { id: user._id } },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "5h" }
+    );
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Set to true in production
-      sameSite: "strict",
-      maxAge: 18000000,
-    });
+    res.cookie("token", token, authCookieOptions());
     // Send response
     return res.status(201).json({
       message: "User registered successfully",
@@ -81,6 +78,13 @@ export const loginUser = async (
     const { email, password, firebaseUID } = req.body;
 
     if (firebaseUID) {
+      if (!isFirebaseAdminConfigured) {
+        return res.status(503).json({
+          message:
+            "Google sign-in is not configured on the server. Add FIREBASE_ACCOUNT_* values to server/.env.",
+        });
+      }
+
       try {
         const decodedToken = await admin.auth().verifyIdToken(firebaseUID);
         if (!decodedToken?.email) {
@@ -136,11 +140,7 @@ export const logOutUser = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "strict",
-  });
+  res.clearCookie("token", authCookieOptions());
   return Promise.resolve(
     res.status(200).json({ message: "Logged out successfully" })
   );
@@ -152,12 +152,7 @@ const generateAndSendToken = (res: Response, userId: string): Response => {
 
   try {
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "5h" });
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 18000000,
-    });
+    res.cookie("token", token, authCookieOptions());
     return res.json({ message: "User Logged in Successfully" });
   } catch (err) {
     console.error("JWT Sign Error:", err);

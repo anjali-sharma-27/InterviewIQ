@@ -33,10 +33,20 @@ interface File {
   language: string;
 }
 
-export default function CodeEditor() {
+interface CodeEditorProps {
+  code?: string;
+  onChange?: (code: string) => void;
+  onClose?: () => void;
+}
+
+export default function CodeEditor({
+  code = "",
+  onChange,
+  onClose,
+}: CodeEditorProps) {
   // Start with one file, defaulting to JavaScript
   const [files, setFiles] = useState<File[]>([
-    { name: "Untitled", content: "", language: "JavaScript" },
+    { name: "Untitled", content: code, language: "JavaScript" },
   ]);
   const [activeFile, setActiveFile] = useState(0);
   const [input, setInput] = useState("");
@@ -67,8 +77,21 @@ export default function CodeEditor() {
     alert("Code copied to clipboard!");
   };
 
+  const syncCode = (content: string) => {
+    onChange?.(content);
+  };
+
+  const updateFileContent = (index: number, content: string) => {
+    const updatedFiles = [...files];
+    updatedFiles[index].content = content;
+    setFiles(updatedFiles);
+    if (index === activeFile) {
+      syncCode(content);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-zinc-900 text-zinc-100">
+    <div className="fixed inset-0 z-[60] flex flex-col h-screen bg-zinc-900 text-zinc-100">
       {/* Top Bar */}
       <div className="flex justify-between items-center p-4 text-white bg-zinc-800 border-b border-zinc-700">
         <Select onValueChange={handleLanguageChange} value={files[activeFile].language}>
@@ -83,7 +106,7 @@ export default function CodeEditor() {
             ))}
           </SelectContent>
         </Select>
-        <div>
+        <div className="flex gap-2">
           <Button
             onClick={handleRunCode}
             disabled={isLoading}
@@ -91,9 +114,17 @@ export default function CodeEditor() {
           >
             {isLoading ? "Running..." : "Run Code"}
           </Button>
-          <Button onClick={handleShare} className="ml-2 bg-zinc-700 hover:bg-zinc-600">
+          <Button onClick={handleShare} className="bg-zinc-700 hover:bg-zinc-600 text-white">
             Share Code
           </Button>
+          {onClose && (
+            <Button
+              onClick={onClose}
+              className="border border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
+            >
+              Close Editor
+            </Button>
+          )}
         </div>
       </div>
 
@@ -115,11 +146,7 @@ export default function CodeEditor() {
                   height="100%"
                   language={getPistonLanguage(file.language)}
                   value={file.content}
-                  onChange={(value) => {
-                    const updatedFiles = [...files];
-                    updatedFiles[index].content = value || "";
-                    setFiles(updatedFiles);
-                  }}
+                  onChange={(value) => updateFileContent(index, value || "")}
                   onMount={handleEditorDidMount}
                   options={{
                     minimap: { enabled: false },
@@ -129,8 +156,8 @@ export default function CodeEditor() {
                     scrollBeyondLastLine: false,
                     readOnly: false,
                     theme: "vs-dark",
+                    automaticLayout: true,
                   }}
-                  defaultValue="// Start coding here"
                   className="border mt-5 border-zinc-700 rounded-md"
                 />
               </TabsContent>

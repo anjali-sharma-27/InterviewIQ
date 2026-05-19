@@ -1,10 +1,10 @@
 import { editInterview, getInterviewByID } from "@/api/mockinterview.api";
 import InterviewInterface from "@/components/InterviewInterface";
 import Loader from "@/components/Loader/Loader";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNotification } from "@/components/Notifications/NotificationContext";
 import { MockInterview, Notification } from "@/vite-env";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { generateQuestions } from "@/api/gemini.api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import InterviewInstructions from "@/components/InterviewInterface/InterviewInst
 
 const InterviewInterfacePage = () => {
   const { addNotification } = useNotification();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const { id } = useParams<{ id: string }>();
   const [interviewData, setInterviewData] = useState<MockInterview>();
@@ -20,48 +21,71 @@ const InterviewInterfacePage = () => {
   );
 
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
+  const hasStartedRef = useRef(false);
+
+  const interviewHasQuestions = (interview: MockInterview) => {
+    const total =
+      (interview.dsaQuestions?.length ?? 0) +
+      (interview.technicalQuestions?.length ?? 0) +
+      (interview.coreSubjectQuestions?.length ?? 0);
+    return total > 0;
+  };
+
   useEffect(() => {
+    if (hasStartedRef.current || !id) return;
+    hasStartedRef.current = true;
+
     const startInterview = async () => {
       try {
-        // console.log(id);
-        const formData = {
-          interviewID: id || "",
-        };
-        const interviewData = await getInterviewByID(id || "");
+        const interviewData = await getInterviewByID(id);
 
-        const resposne2 = await generateQuestions(formData);
+        let dsaQuestions = interviewData.dsaQuestions ?? [];
+        let coreSubjectQuestions = interviewData.coreSubjectQuestions ?? [];
+        let technicalQuestions = interviewData.technicalQuestions ?? [];
 
-        // console.log("Generated Questions",resposne2.data);
+        if (!interviewHasQuestions(interviewData)) {
+          const response = await generateQuestions({ interviewID: id });
+          const generated = response.data;
+          dsaQuestions = generated.dsaQuestions ?? [];
+          coreSubjectQuestions = generated.coreSubjectQuestions ?? [];
+          technicalQuestions = generated.techStackQuestions ?? [];
+        }
 
-        interviewData.dsaQuestions = resposne2.data.dsaQuestions;
-        interviewData.coreSubjectQuestions =
-          resposne2.data.coreSubjectQuestions;
-        interviewData.technicalQuestions = resposne2.data.techStackQuestions;
-        interviewData.overallRating = 0;
-        interviewData.overallReview = "";
+        interviewData.dsaQuestions = dsaQuestions;
+        interviewData.coreSubjectQuestions = coreSubjectQuestions;
+        interviewData.technicalQuestions = technicalQuestions;
+        interviewData.overallRating = interviewData.overallRating ?? 0;
+        interviewData.overallReview = interviewData.overallReview ?? "";
 
-        // console.log("Interview Data", interviewData);
-        const editedInterview = await editInterview(id || "", interviewData);
+        const editedInterview = await editInterview(id, interviewData);
         setInterviewData(editedInterview);
-        // console.log("Edited Interview", editedInterview);
         enterFullScreen();
         setLoading(false);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(error);
+        const apiMessage =
+          typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          typeof (error as { response?: { data?: { error?: string } } })
+            .response?.data?.error === "string"
+            ? (error as { response: { data: { error: string } } }).response.data
+                .error
+            : null;
         const newNotification: Notification = {
           id: Date.now().toString(),
           type: "error",
-          message: "Interview not found",
+          message:
+            apiMessage ||
+            "Could not start the interview. Check your connection and Gemini API settings on the server.",
         };
         addNotification(newNotification);
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-          setLoading(false);
-        }, 5000);
+        setLoading(false);
+        navigate("/dashboard");
       }
     };
     startInterview();
-  }, []);
+  }, [addNotification, id, navigate]);
   useEffect(() => {
     const handleFullScreenChange = () => {
       setIsFullScreen(!!document.fullscreenElement);
@@ -133,7 +157,10 @@ const InterviewInterfacePage = () => {
               You must enter fullscreen mode to proceed with the interview.
             </h2>
             <div className="w-full flex items-center justify-center">
-              <Button onClick={enterFullScreen} variant="secondary">
+              <Button
+                onClick={enterFullScreen}
+                className="bg-emerald-600 text-white hover:bg-emerald-700"
+              >
                 Enter FullScreen
               </Button>
             </div>

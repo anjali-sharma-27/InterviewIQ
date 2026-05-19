@@ -30,11 +30,11 @@ COPY --from=builder /app/dist ./dist
 RUN npm install --omit=dev
 
 # Expose the application port
-EXPOSE 8000
+EXPOSE 5000
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=8000
+ENV PORT=5000
 
 # Command to run the application
 CMD ["node", "dist/src/server.js"]

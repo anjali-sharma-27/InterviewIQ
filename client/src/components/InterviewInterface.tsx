@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
+import { useWebSpeech } from "@/utils/hooks/useWebSpeech";
 import {
   Dialog,
   DialogContent,
@@ -60,17 +60,17 @@ const InterviewInterface: React.FC<InterviewInterfaceProps> = ({
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [isCurrentAnswerSaved, setIsCurrentAnswerSaved] = useState(false);
 
-  const AZURE_SUBSCRIPTION_KEY = import.meta.env.VITE_AZURE_SUBSCRIPTION_KEY;
-  const AZURE_REGION = import.meta.env.VITE_AZURE_REGION;
-
   const [transcript, setTranscript] = useState(
-    "Speech-to-text content will appear here.."
+    "Your spoken answer will appear here. Click Record to start."
   );
 
-  const [partialTranscript, setPartialTranscript] = useState("");
-  // const [language, setLanguage] = useState("en-US");
-  const language = "en-US";
-  const recognizerRef = useRef<SpeechSDK.SpeechRecognizer | null>(null);
+  const {
+    isSupported: isSpeechSupported,
+    partialTranscript,
+    error: speechError,
+    startRecognition,
+    stopRecognition,
+  } = useWebSpeech("en-US");
 
   const [codeResponse, setCodeResponse] = useState("");
   const [savedInterviewData, setSavedInterviewData] =
@@ -157,72 +157,41 @@ const InterviewInterface: React.FC<InterviewInterfaceProps> = ({
   //   }
   // };
 
-  const startRecognition = () => {
-    if (!AZURE_SUBSCRIPTION_KEY || !AZURE_REGION) {
-      alert("Azure credentials are missing.");
-      return;
-    }
-
-    const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
-      AZURE_SUBSCRIPTION_KEY,
-      AZURE_REGION
-    );
-    speechConfig.speechRecognitionLanguage = language;
-
-    const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
-    const recognizer = new SpeechSDK.SpeechRecognizer(
-      speechConfig,
-      audioConfig
-    );
-    recognizerRef.current = recognizer;
-
-    setIsCurrentAnswerSaved(false);
-    setTranscript("");
-    setPartialTranscript("");
-    // setIsListening(true);
-
-    recognizer.recognizing = (sender, event) => {
-      sender;
-
-      setPartialTranscript(event.result.text);
-    };
-
-    recognizer.recognized = (sender, event) => {
-      sender;
-      if (event.result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
-        let finalText = event.result.text;
-        // if (language === "hi-IN") {
-        //   console.log("Transliterating Hindi text...");
-        //   finalText = transliterate(finalText);
-        // }
-        setIsCurrentAnswerSaved(false);
-        setTranscript((prev) => `${prev} ${finalText}`.trim());
-        setPartialTranscript("");
-      }
-    };
-
-    recognizer.startContinuousRecognitionAsync();
-  };
-
-  const stopRecognition = () => {
-    if (recognizerRef.current) {
-      recognizerRef.current.stopContinuousRecognitionAsync(() => {
-        recognizerRef.current?.close();
-        recognizerRef.current = null;
-        // setIsListening(false);
-      });
-    }
-  };
-
   const handleRecording = () => {
     if (!isRecording) {
-      setIsRecording(true);
-      startRecognition();
+      if (!isSpeechSupported) {
+        addNotification({
+          id: Date.now().toString(),
+          type: "warning",
+          message:
+            "Speech recognition is not supported in this browser. Use Chrome or Edge, or type your answer manually.",
+        });
+        return;
+      }
+
+      setIsCurrentAnswerSaved(false);
+      setTranscript("");
+      const started = startRecognition((finalText) => {
+        setIsCurrentAnswerSaved(false);
+        setTranscript((prev) => {
+          const base =
+            prev === "Your spoken answer will appear here. Click Record to start."
+              ? ""
+              : prev;
+          return `${base} ${finalText}`.trim();
+        });
+      });
+
+      if (started) setIsRecording(true);
     } else {
       setIsRecording(false);
       stopRecognition();
     }
   };
+
+  useEffect(() => {
+    return () => stopRecognition();
+  }, [stopRecognition]);
 
   const handleEditorOpen = () => {
     setIsEditorOpen(!isEditorOpen);
@@ -260,9 +229,19 @@ const InterviewInterface: React.FC<InterviewInterfaceProps> = ({
     };
 
     handleQuestions();
-  }, []);
+  }, [interviewDetails]);
 
   const handleSaveResponse = () => {
+    if (maxQuestions === 0 || !Questions[currentQuestion]) {
+      addNotification({
+        id: Date.now().toString(),
+        type: "error",
+        message:
+          "No questions available. Return to the dashboard and start a new interview.",
+      });
+      return;
+    }
+
     const allResponse = `Text Response: ${transcript}\nCode Response: ${codeResponse}`;
     const currentQuestionObj = Questions[currentQuestion];
     const category = currentQuestionObj.type;
@@ -373,8 +352,7 @@ const InterviewInterface: React.FC<InterviewInterfaceProps> = ({
         <div className="flex items-center">
           <ScreenRecorder />
           <Button
-            className="h-[35px]"
-            variant="outline"
+            className="h-[35px] border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
             onClick={handleEditorOpen}
           >{`${
             isEditorOpen ? "Close Code Editor" : "Open Code Editor"
@@ -388,11 +366,17 @@ const InterviewInterface: React.FC<InterviewInterfaceProps> = ({
         <div className="space-y-6">
           <Card className="p-6 bg-zinc-800/50 border-zinc-700">
             <h2 className="text-xl font-semibold text-white mb-4">
-              Current Question {currentQuestion + 1} of {maxQuestions} [
-              Category ]
+              Question {currentQuestion + 1} of {maxQuestions}
+              {Questions[currentQuestion]?.type && (
+                <span className="ml-2 text-sm font-normal text-emerald-400 capitalize">
+                  · {Questions[currentQuestion].type.replace(/Questions$/, "")}
+                </span>
+              )}
             </h2>
             <p className="text-zinc-300">
-              {Questions.length > 0 ? Questions[currentQuestion].question : ""}
+              {Questions.length > 0
+                ? Questions[currentQuestion]?.question
+                : "No questions were generated. This usually means the Gemini API key or model is misconfigured on the server. Go back to the dashboard and try again after fixing server/.env."}
             </p>
             <div className="w-full mt-1 flex justify-end">
               {/* <Button
@@ -429,7 +413,15 @@ const InterviewInterface: React.FC<InterviewInterfaceProps> = ({
             <h2 className="text-xl font-semibold text-white mb-4">
               Your Text Response
             </h2>
-            <div className="text-zinc-400 italic">{transcript}</div>
+            <textarea
+              value={transcript}
+              onChange={(e) => {
+                setIsCurrentAnswerSaved(false);
+                setTranscript(e.target.value);
+              }}
+              placeholder="Type your answer or click Record to use voice input"
+              className="w-full min-h-[200px] bg-zinc-900 text-zinc-200 p-3 border border-zinc-700 rounded-md resize-y"
+            />
           </Card>
           <Card className="p-6 bg-zinc-800/50 border-zinc-700 min-h-[200px]">
             <h2 className="text-xl font-semibold text-white mb-4">
@@ -437,18 +429,13 @@ const InterviewInterface: React.FC<InterviewInterfaceProps> = ({
             </h2>
             <div className="">
               <textarea
+                value={codeResponse}
                 onChange={(e) => {
+                  setIsCurrentAnswerSaved(false);
                   setCodeResponse(e.target.value);
                 }}
-                readOnly
-                placeholder="You can only Paste Code in this section to write code open code editor from navbar"
-                className="w-full bg-zinc-800 text-white h-full p-2 placeholder:italic"
-                onPaste={(e) => {
-                  e.preventDefault();
-                  const text = e.clipboardData.getData("text");
-                  e.currentTarget.value = text;
-                  setCodeResponse(text);
-                }}
+                placeholder="Type code here, or use Open Code Editor in the header for Monaco + run"
+                className="w-full min-h-[120px] bg-zinc-800 text-white p-2 placeholder:text-zinc-500 placeholder:italic border border-zinc-700 rounded-md"
               />
             </div>
           </Card>
@@ -500,7 +487,11 @@ const InterviewInterface: React.FC<InterviewInterfaceProps> = ({
               variant={isRecording ? "destructive" : "outline"}
               size="lg"
               onClick={handleRecording}
-              className="w-40"
+              className={`w-40 ${
+                !isRecording
+                  ? "border-zinc-600 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
+                  : ""
+              }`}
             >
               {isRecording ? (
                 <>
@@ -516,7 +507,21 @@ const InterviewInterface: React.FC<InterviewInterfaceProps> = ({
             </Button>
           </div>
           <Card className="p-6 bg-zinc-800/50 border-zinc-700 min-h-[70px]">
-            <div className="text-zinc-400">{partialTranscript}</div>
+            <p className="text-xs uppercase tracking-wide text-zinc-500 mb-2">
+              Live transcript
+            </p>
+            <div className="text-zinc-400 italic min-h-[1.5rem]">
+              {partialTranscript || (isRecording ? "Listening…" : "—")}
+            </div>
+            {speechError && (
+              <p className="text-amber-400 text-sm mt-2">{speechError}</p>
+            )}
+            {!isSpeechSupported && (
+              <p className="text-amber-400 text-sm mt-2">
+                Browser speech recognition unavailable. Type or paste your answer
+                manually.
+              </p>
+            )}
           </Card>
           <Card className="p-6 bg-zinc-800/50 border-zinc-700 min-h-[70px]">
             {isRecording && <AudioVisualizer />}
@@ -525,7 +530,16 @@ const InterviewInterface: React.FC<InterviewInterfaceProps> = ({
       </div>
       <Timer />
       <ExitButton />
-      {isEditorOpen && <CodeEditor />}
+      {isEditorOpen && (
+        <CodeEditor
+          code={codeResponse}
+          onChange={(value) => {
+            setIsCurrentAnswerSaved(false);
+            setCodeResponse(value);
+          }}
+          onClose={() => setIsEditorOpen(false)}
+        />
+      )}
     </div>
   );
 };

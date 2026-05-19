@@ -60,9 +60,61 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
+  html {
+    font-size: 16px;
   }
+  body {
+    @apply bg-zinc-950 text-foreground antialiased;
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  p {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  h1 {
+    font-size: 3rem;
+    font-weight: 600;
+  }
+  h2 {
+    font-size: 2rem;
+    font-weight: 600;
+  }
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+  h4 {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+}
+
+@keyframes btn-emerald-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.94);
+  }
+  70% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.btn-emerald-action {
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-emerald-action:hover {
+  transform: scale(1.04);
+}
+
+.btn-emerald-action:active {
+  animation: btn-emerald-pop 0.3s ease-out;
 }
 
 

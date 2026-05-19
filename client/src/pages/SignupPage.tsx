@@ -10,13 +10,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "@/utils/firebase/firebase";
 import { registerUser } from "@/api/user.api";
 import { useNotification } from "@/components/Notifications/NotificationContext";
 import { Notification } from "@/vite-env";
+import AppLayout from "@/components/layout/AppLayout";
+import { useAuth } from "@/context/AuthContext";
 
 export function SignupPage({
   className,
@@ -28,179 +30,197 @@ export function SignupPage({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [firebaseUid, setFirebaseUid] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { addNotification } = useNotification();
+  const { refreshUser } = useAuth();
 
   const handleGoogleSignup = async () => {
+    setLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      // console.log((result as any)._tokenResponse);
-      setName((result as any)._tokenResponse.displayName);
-      setEmail((result as any)._tokenResponse.email);
-      setFirebaseUid((result as any)._tokenResponse.user_id);
-      setPassword(`${Math.random() * 1000000}`);
-      const formData = {
-        name,
-        email,
-        password,
-        firebaseUid: firebaseUid || "",
-      };
-      const response = await registerUser(formData);
-      response;
-      // console.log("Response", response);
-      const newNotification: Notification = {
+      const token = (result as { _tokenResponse?: { idToken?: string; displayName?: string; email?: string } })
+        ._tokenResponse;
+      await registerUser({
+        name: token?.displayName ?? "User",
+        email: token?.email ?? "",
+        password: `${Math.random() * 1000000}`,
+        firebaseUID: token?.idToken ?? "",
+      });
+      await refreshUser();
+      addNotification({
         id: Date.now().toString(),
         type: "success",
-        message: "User Registered Successfully",
-      };
-      addNotification(newNotification);
-      navigate("/login");
+        message: "Account created successfully",
+      } as Notification);
+      navigate("/dashboard");
     } catch (error) {
-      // console.error("Test", error);
-      const newNotification: Notification = {
+      addNotification({
         id: Date.now().toString(),
         type: "error",
-        message: `${(error as any).response.data.error}`,
-      };
-      addNotification(newNotification);
+        message: `${(error as { response?: { data?: { error?: string } } }).response?.data?.error ?? "Sign up failed"}`,
+      } as Notification);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSignup = async () => {
+    if (password !== confirmPassword) {
+      addNotification({
+        id: Date.now().toString(),
+        type: "warning",
+        message: "Passwords do not match",
+      } as Notification);
+      return;
+    }
+    setLoading(true);
     try {
-      if (password !== confirmPassword) {
-        alert("Passwords do not match");
-        return;
-      }
-      const formData = {
-        name,
-        email,
-        password,
-        firebaseUid: firebaseUid || "",
-      };
-      await registerUser(formData);
-      const newNotification: Notification = {
+      await registerUser({ name, email, password, firebaseUID: "" });
+      addNotification({
         id: Date.now().toString(),
         type: "success",
-        message: "User Registered Successfully",
-      };
-      addNotification(newNotification);
+        message: "Account created — please sign in",
+      } as Notification);
       navigate("/login");
     } catch (error) {
-      // console.error("Test", (error as any).response.data);
-      const newNotification: Notification = {
+      addNotification({
         id: Date.now().toString(),
         type: "error",
-        message: `${(error as any).response.data.error}`,
-      };
-      addNotification(newNotification);
+        message: `${(error as { response?: { data?: { error?: string } } }).response?.data?.error ?? "Sign up failed"}`,
+      } as Notification);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="h-screen w-screen flex justify-center items-center">
-      <div
-        className={cn("flex flex-col gap-6 lg:w-80 max-w-6xl", className)}
-        {...props}
-      >
-        <Card className="bg-gray-200">
+    <AppLayout
+      variant="public"
+      showFooter={false}
+      mainClassName="flex min-h-[calc(100vh-6rem)] items-center justify-center px-4"
+    >
+      <div className={cn("w-full max-w-md", className)} {...props}>
+        <Card className="border-zinc-800 bg-zinc-900/90 text-zinc-100">
           <CardHeader>
-            <CardTitle className="text-2xl">Sign Up</CardTitle>
-            <CardDescription>
-              Enter your details to create an account
+            <CardTitle className="text-2xl text-white">Create account</CardTitle>
+            <CardDescription className="text-zinc-400">
+              Start practicing with AI mock interviews
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={(e) => e.preventDefault()}>
-              <div className="flex flex-col gap-6">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
+            <form
+              onSubmit={(e) => e.preventDefault()}
+              className="flex flex-col gap-6"
+            >
+              <div className="grid gap-2">
+                <Label htmlFor="name" className="text-zinc-300">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  required
+                  className="border-zinc-700 bg-zinc-950 text-zinc-100"
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="email" className="text-zinc-300">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  required
+                  className="border-zinc-700 bg-zinc-950 text-zinc-100"
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password" className="text-zinc-300">
+                  Password
+                </Label>
+                <div className="relative">
                   <Input
-                    id="name"
-                    type="text"
-                    placeholder="John Doe"
+                    id="password"
+                    type={showPassword ? "text" : "password"}
                     required
-                    onChange={(e) => setName(e.target.value)}
+                    className="border-zinc-700 bg-zinc-950 pr-10 text-zinc-100"
+                    onChange={(e) => setPassword(e.target.value)}
                   />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-3 flex items-center text-zinc-500"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <Eye className="h-4 w-4" />
+                    ) : (
+                      <EyeOff className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="confirmPassword" className="text-zinc-300">
+                  Confirm password
+                </Label>
+                <div className="relative">
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
                     required
-                    onChange={(e) => setEmail(e.target.value)}
+                    className="border-zinc-700 bg-zinc-950 pr-10 text-zinc-100"
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                   />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-3 flex items-center text-zinc-500"
+                    onClick={() =>
+                      setShowConfirmPassword(!showConfirmPassword)
+                    }
+                  >
+                    {showConfirmPassword ? (
+                      <Eye className="h-4 w-4" />
+                    ) : (
+                      <EyeOff className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <Eye className="text-red-500" />
-                      ) : (
-                        <EyeOff />
-                      )}
-                    </button>
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      required
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                    >
-                      {showConfirmPassword ? (
-                        <Eye className="text-red-500" />
-                      ) : (
-                        <EyeOff />
-                      )}
-                    </button>
-                  </div>
-                </div>
-                <Button onClick={handleSignup} className="w-full">
-                  Sign Up
-                </Button>
               </div>
               <Button
-                onClick={handleGoogleSignup}
+                type="button"
+                disabled={loading}
+                className="w-full bg-emerald-500 hover:bg-emerald-600"
+                onClick={handleSignup}
+              >
+                {loading ? "Creating account…" : "Sign up"}
+              </Button>
+              <Button
+                type="button"
                 variant="outline"
-                className="w-full mt-2"
+                disabled={loading}
+                className="w-full border-zinc-700 bg-transparent text-zinc-200 hover:bg-zinc-800"
+                onClick={handleGoogleSignup}
               >
                 Continue with Google
               </Button>
-              <div className="mt-4 text-center text-sm">
-                Already have an account?{" "}
-                <a href="/login" className="underline underline-offset-4">
-                  Login
-                </a>
-              </div>
             </form>
+            <p className="mt-4 text-center text-sm text-zinc-400">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="text-emerald-400 underline-offset-4 hover:underline"
+              >
+                Log in
+              </Link>
+            </p>
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AppLayout>
   );
 }

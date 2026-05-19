@@ -1,8 +1,6 @@
-import axios from "axios";
+import { apiClient, API_ROOT } from "./client";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-const API_URL = `${API_BASE_URL}/users`;
+const API_URL = `${API_ROOT}/users`;
 
 interface RegisterUserPayload {
   name: string;
@@ -23,84 +21,26 @@ interface EditUserPayload {
 }
 
 export const getUser = async () => {
-  try{
-    const response = await axios.get(`${API_URL}/getuserdetails`, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      withCredentials: true
-    });
-    return response.data;
-  }
-  catch(error){
-    console.error("Error getting user details:", (error as any).response.data.message);
-    throw error;
-  }
-}
+  const response = await apiClient.get(`${API_URL}/getuserdetails`);
+  return response.data;
+};
 
-// Register User
 export const registerUser = async (userData: RegisterUserPayload) => {
-  try {
-    const response = await axios.post(`${API_URL}/register`, userData, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error logging in user:", (error as any).response.data.error);
-    throw error;
-  }
+  const response = await apiClient.post(`${API_URL}/register`, userData);
+  return response.data;
 };
 
-// Login User
 export const loginUser = async (userData: LoginUserPayload) => {
-  try {
-    const response = await axios.post(`${API_URL}/login`, userData, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      withCredentials: true
-    });
-    // console.log("response", response);
-    return response.data;
-  } catch (error) {
-    console.error("Error in user Registration:", (error as any).response.data.message);
-    throw error;
-  }
+  const response = await apiClient.post(`${API_URL}/login`, userData);
+  return response.data;
 };
 
-// Edit User
 export const editUser = async (userData: EditUserPayload) => {
-  try {
-    const response = await axios.put(`${API_URL}/edit`, userData, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error updating user:", (error as any).response.data.message);
-    throw error;
-  }
+  const response = await apiClient.put(`${API_URL}/edit`, userData);
+  return response.data;
 };
 
-// Logout User
 export const logoutUser = async () => {
-  try {
-    const response = await axios.post(
-      `${API_URL}/logout`, 
-      {}, 
-      {
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true, // Ensures the request includes credentials
-      }
-    );
-    
-    return response.data;
-  } catch (error) {
-    console.error("Error logging out user:", (error as any).response?.data?.message);
-    throw error;
-  }
+  const response = await apiClient.post(`${API_URL}/logout`, {});
+  return response.data;
 };
-

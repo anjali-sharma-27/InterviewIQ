@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import MockInterviewModel from "../models/mockinterview.model";
 import User from "../models/user.model";
 
@@ -36,7 +37,11 @@ export const createMockInterview = async (req: Request, res: Response) => {
     const savedMockInterview = await newMockInterview.save();
     res.status(201).json(savedMockInterview);
   } catch (error) {
-    res.status(500).json({ message: error });
+    if (error instanceof mongoose.Error.ValidationError) {
+      return res.status(400).json({ message: error.message });
+    }
+    console.error("Error creating mock interview:", error);
+    res.status(500).json({ message: "Failed to create interview" });
   }
 };
 

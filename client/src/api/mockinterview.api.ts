@@ -1,69 +1,35 @@
-import axios from 'axios';
-import { MockInterview } from '@/vite-env';
+import { apiClient, API_ROOT } from "./client";
+import { MockInterview } from "@/vite-env";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const API_URL = `${API_BASE_URL}/mockinterview`;
+const API_URL = `${API_ROOT}/mockinterview`;
 
-const axiosInstance = axios.create({
-  baseURL: API_URL,
-  withCredentials: true, 
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Create Interview
 export const createInterview = async (interviewData: MockInterview) => {
-  try {
-    const response = await axiosInstance.post('/create', interviewData);
-    return response.data;
-  } catch (error) {
-    console.error('Error creating interview:',  (error as any).response.data.message);
-    throw error;
-  }
+  const response = await apiClient.post(`${API_URL}/create`, interviewData);
+  return response.data;
 };
 
-// Get All Interviews (No user ID required)
 export const getAllInterviews = async () => {
-  try {
-    const response = await axiosInstance.get('/');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching interviews:',  (error as any).response.data.message);
-    throw error;
-  }
+  const response = await apiClient.get(`${API_URL}/`);
+  return response.data;
 };
 
-// Get Interview by ID
 export const getInterviewByID = async (interviewID: string) => {
-  try {
-    const response = await axiosInstance.get(`/${
-      interviewID}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching interview by ID:',  (error as any).response.data.message);
-    throw error;
-  }
+  const response = await apiClient.get(`${API_URL}/${interviewID}`);
+  return response.data;
 };
 
-// Edit Interview
-export const editInterview = async (interviewID: string, interviewData: MockInterview) => {
-  try {
-    const response = await axiosInstance.put(`/edit/${interviewID}`, interviewData);
-    return response.data;
-  } catch (error) {
-    console.error('Error editing interview:',  (error as any).response.data.message);
-    throw error;
-  }
+export const editInterview = async (
+  interviewID: string,
+  interviewData: MockInterview
+) => {
+  const response = await apiClient.put(
+    `${API_URL}/edit/${interviewID}`,
+    interviewData
+  );
+  return response.data;
 };
 
-// Delete Interview
 export const deleteInterview = async (interviewID: string) => {
-  try {
-    const response = await axiosInstance.delete(`/delete/${interviewID}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting interview:',  (error as any).response.data.message);
-    throw error;
-  }
+  const response = await apiClient.delete(`${API_URL}/delete/${interviewID}`);
+  return response.data;
 };

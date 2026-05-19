@@ -16,7 +16,7 @@ router.post(
   asyncHandler(authMiddleware),
   asyncHandler(createMockInterview)
 );
-router.get("/", asyncHandler(authMiddleware), getMockInterviews);
+router.get("/", asyncHandler(authMiddleware), asyncHandler(getMockInterviews));
 router.get(
   "/:id",
   asyncHandler(authMiddleware),

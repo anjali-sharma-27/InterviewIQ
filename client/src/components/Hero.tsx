@@ -1,7 +1,12 @@
 import { X } from "lucide-react";
 import { useState } from "react";
 import Form from "../components/Form";
-const Hero = () => {
+
+interface HeroProps {
+  onInterviewCreated?: () => void;
+}
+
+const Hero = ({ onInterviewCreated }: HeroProps) => {
   const [isFormOpen, setFormOpen] = useState(false);
   const handleFormOpen = () => {
     setFormOpen(!isFormOpen);
@@ -10,7 +15,7 @@ const Hero = () => {
   if (isFormOpen)
     return (
       <div className="bg-black/80 w-screen h-screen fixed top-0 left-0 z-30">
-        <Form />
+        <Form onClose={handleFormOpen} onSuccess={onInterviewCreated} />
         <button
           className="rounded-full z-10 fixed top-3 right-5 text-white border border-slate-300 py-2 px-4 text-center text-sm transition-all shadow-sm hover:shadow-lg  hover:text-slate-600 hover:bg-slate-200 hover:border-slate-800 focus:text-white focus:bg-slate-800 focus:border-slate-800 active:border-slate-800 active:text-white active:bg-slate-800 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
           type="button"

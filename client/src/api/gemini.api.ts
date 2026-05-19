@@ -1,42 +1,45 @@
-import { MockInterview } from '@/vite-env';
-import axios, { AxiosResponse } from 'axios';
+import type { AxiosResponse } from "axios";
+import { MockInterview } from "@/vite-env";
+import { apiClient, API_ROOT } from "./client";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-const API_URL = `${API_BASE_URL}/ai`;
+const API_URL = `${API_ROOT}/ai`;
 
 interface GenerateRequest {
   interviewID: string;
 }
 
-
-interface GenerateReviewRequest{
-  InterviewDetailsObject:MockInterview;
+interface GenerateReviewRequest {
+  InterviewDetailsObject: MockInterview;
 }
-// Function to generate DSA questions
-export const generateQuestions = async (data: GenerateRequest): Promise<AxiosResponse> => {
-  try {
-    const response = await axios.post(`${API_URL}/generatequestions`, data, {
-      headers: { 'Content-Type': 'application/json' },
-      withCredentials: true,
-    });
-    return response;
-  } catch (error) {
-    throw new Error(`Failed to generate Questions: ${error}`);
+
+export interface GeneratedQuestionsResponse {
+  dsaQuestions: MockInterview["dsaQuestions"];
+  coreSubjectQuestions: MockInterview["coreSubjectQuestions"];
+  techStackQuestions: MockInterview["technicalQuestions"];
+}
+
+const inFlightByInterview = new Map<
+  string,
+  Promise<AxiosResponse<GeneratedQuestionsResponse>>
+>();
+
+export const generateQuestions = async (
+  data: GenerateRequest
+): Promise<AxiosResponse<GeneratedQuestionsResponse>> => {
+  const key = data.interviewID;
+  const existing = inFlightByInterview.get(key);
+  if (existing) {
+    return existing;
   }
+
+  const request = apiClient
+    .post<GeneratedQuestionsResponse>(`${API_URL}/generatequestions`, data)
+    .finally(() => inFlightByInterview.delete(key));
+
+  inFlightByInterview.set(key, request);
+  return request;
 };
 
-
-
-// Function to generate review
-export const generateReview = async (data: GenerateReviewRequest): Promise<AxiosResponse> => {
-  try {
-    const response = await axios.post(`${API_URL}/generatereview`, data, {
-      headers: { 'Content-Type': 'application/json' },
-      withCredentials: true,
-    });
-    return response;
-  } catch (error) {
-    throw new Error(`Failed to generate Review: ${error}`);
-  }
+export const generateReview = async (data: GenerateReviewRequest) => {
+  return apiClient.post(`${API_URL}/generatereview`, data);
 };
