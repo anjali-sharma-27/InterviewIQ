@@ -1,7 +1,7 @@
 # InterviewIQ 🧠
 An **AI-powered mock interview platform** to practice role-specific interviews, get detailed feedback, and track your improvement over time. Built with **MERN Stack** and **Google Gemini AI**.
 
-🔗 Live Demo — https://your-vercel-url.vercel.app
+🔗 Live Demo — https://interview-iq-wheat.vercel.app
 
 ---
 
