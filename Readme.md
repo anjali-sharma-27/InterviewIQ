@@ -1,81 +1,101 @@
-# AI-Powered Interview Platform
+# InterviewIQ 🧠
+An **AI-powered mock interview platform** to practice role-specific interviews, get detailed feedback, and track your improvement over time. Built with **MERN Stack** and **Google Gemini AI**.
 
-An **AI-driven mock interview platform** leveraging **Azure AI** (Speech-to-Text) and **Gemini AI** (for intelligent question generation). Built with **MERN stack** and deployed using **AWS Serverless** for a **scalable and cost-efficient** backend.
+🔗 Live Demo — https://your-vercel-url.vercel.app
+
+---
 
 ## 🚀 Features
-- **AI-Powered Question Generation** – Uses **Gemini AI** to generate dynamic, role-specific interview questions.
-- **Real-time Transcription** – Converts speech to text via **Azure AI Speech Services** for seamless interview documentation.
-- **Scalable & Serverless** – Deployed with **AWS Lambda and API Gateway** for optimal performance.
-- **Interactive Code Editor** – Supports live coding assessments
+- **AI-Powered Question Generation** — Uses **Gemini AI** to generate dynamic, role-specific interview questions
+- **Voice Input** — Answer questions using your microphone via Web Speech API
+- **Interactive Code Editor** — Built-in Monaco editor with live code execution
+- **Screen Recording** — Record your session locally to review performance
+- **AI Feedback** — Per-question review with overall rating out of 10
+- **Progress Tracking** — Chart to visualize your improvement over time
+- **Interview Templates** — Quick setup for popular roles and stacks
+- **Retake Interviews** — Redo any past interview in one click
 
 ---
 
 ## 🛠️ Tech Stack
-### **Frontend (Client)**
-- **React.js + Vite** – Fast and optimized UI
-- **Tailwind CSS** – Modern, responsive styling
-- **Lucide React** – Icon library for enhanced UI
 
-### **Backend (Server)**
-- **Node.js & Express.js** – Efficient REST API backend
-- **MongoDB (Atlas)** – Cloud database for structured interview data
-- **AWS Serverless** – Lambda, API Gateway, and S3 for scalable deployment
-- **Socket.io** – Real-time communication for interview sessions
-- **Azure AI Speech-to-Text** – Converts spoken words to text in real time
-- **Gemini AI** – Generates interview questions dynamically
+### Frontend
+- **React.js + Vite** — Fast and optimized UI
+- **TypeScript** — Type-safe codebase
+- **Tailwind CSS** — Modern responsive styling
+- **Shadcn UI** — Reusable component library
+- **Lucide React** — Icon library
+
+### Backend
+- **Node.js + Express.js** — REST API backend
+- **TypeScript** — Type-safe server code
+- **MongoDB Atlas** — Cloud database
+- **Firebase Authentication** — Secure user auth
+- **Google Gemini AI** — Question generation and feedback
 
 ---
 
 ## 📂 Folder Structure
-```
-📦 AI-Interview-Platform
+📦 InterviewIQ
 ├── 📁 client   # Frontend (React + Vite)
 ├── 📁 server   # Backend (Node.js + Express)
 └── README.md
-```
-
 ---
 
 ## 🔧 Setup Instructions
 
 ### 1️⃣ Clone the Repository
 ```sh
-git clone hhttps://github.com/Cleveridiot07/MockMate.git
-cd= mockmate
+git clone https://github.com/anjali-sharma-27/InterviewIQ.git
+cd InterviewIQ
 ```
 
-### 2️⃣ Setup **Client** (Frontend)
+### 2️⃣ Setup Frontend
 ```sh
 cd client
 npm install
-npm run dev  # Starts frontend on http://localhost:5173
+cp .env.sample .env
+# Fill in your values in .env
+npm run dev
 ```
 
-### 3️⃣ Setup **Server** (Backend)
+### 3️⃣ Setup Backend
 ```sh
 cd server
 npm install
-npm run dev  # Starts backend on http://localhost:8000
+cp .env.sample .env
+# Fill in your values in .env
+npm run dev
 ```
+
+---
+
+## 🔑 Environment Variables
+
+### client/.env
+VITE_SERVER_URL=
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_APP_ID=
+
+### server/.env
+MONGODB_URI=
+GEMINI_API_KEY=
+FIREBASE_PROJECT_ID=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_CLIENT_EMAIL=
+PORT=8000
 
 ---
 
 ## 🚀 Deployment
-### **Frontend**: Deployed on **Netlify**
-```sh
-npm run build  # Generates optimized build files
-```
-
-### **Backend**: Deployed on **AWS Lambda** via **Serverless Framework**
-```sh
-serverless deploy
-```
+- **Frontend** — Deployed on **Vercel**
+- **Backend** — Deployed on **Render**
 
 ---
 
-
-
-## 👥 Contributors
-- **Nikhil Saxena** – [GitHub](https://github.com/Cleveridiot07)
-
-Pull requests are welcome! 🚀
+## 👩‍💻 Author
+**Anjali Sharma**
+- GitHub — https://github.com/anjali-sharma-27
+- LinkedIn —https://www.linkedin.com/in/anjali-sharma-27
