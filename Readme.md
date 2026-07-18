@@ -6,7 +6,7 @@ An **AI-powered mock interview platform** to practice role-specific interviews, 
 ---
 
 ## 🚀 Features
-- **AI-Powered Question Generation** — Uses **Gemini AI** to generate dynamic, role-specific interview questions
+- **AI-Powered Question Generation** — Uses **Gemini AI** to generate dynamic, role-specific interview questions.
 - **Voice Input** — Answer questions using your microphone via Web Speech API
 - **Interactive Code Editor** — Built-in Monaco editor with live code execution
 - **Screen Recording** — Record your session locally to review performance
